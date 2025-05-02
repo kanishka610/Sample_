@@ -1,128 +1,137 @@
-package com.example.termall
+package com.example.appterm
 
-import android.annotation.SuppressLint
-import android.content.ContentValues
-import android.content.Intent
-import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.os.Bundle
-import android.widget.*
-import androidx.activity.enableEdgeToEdge
+import android.view.*
+import android.widget.Button
+import android.widget.PopupMenu
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.termall.SharedActivity
-import com.example.termall.R
+import androidx.appcompat.widget.Toolbar
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var dbHelper: DatabaseHelper
-    private lateinit var database: SQLiteDatabase
-    private lateinit var nameInput: EditText
-    private lateinit var ageInput: EditText
-    private lateinit var addButton: Button
-    private lateinit var updateButton: Button
-    private lateinit var deleteButton: Button
-    private lateinit var viewButton: Button
-    private lateinit var resultText: TextView
-    private lateinit var buttons:Button
-    private lateinit var buttonfire:Button
-    private lateinit var videoview:VideoView
-    @SuppressLint("MissingInflatedId")
+class MainActivity2 : AppCompatActivity() {
+
+    private lateinit var contextTextView: TextView
+    private lateinit var popupButton: Button
+    private lateinit var notifyButton: Button
+
+    private val CHANNEL_ID = "demo_channel_id"
+    private val NOTIFICATION_ID = 1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        dbHelper = DatabaseHelper(this)
-        database = dbHelper.writableDatabase
-        nameInput = findViewById(R.id.nameInput)
-        ageInput = findViewById(R.id.ageInput)
-        addButton = findViewById(R.id.addButton)
-        updateButton = findViewById(R.id.updateButton)
-        deleteButton = findViewById(R.id.deleteButton)
-        viewButton = findViewById(R.id.viewButton)
-        resultText = findViewById(R.id.resultText)
-        buttons=findViewById(R.id.button_share)
-        buttonfire=findViewById(R.id.button_fire)
-        videoview=findViewById(R.id.videoView)
-        addButton.setOnClickListener { addData() }
-        updateButton.setOnClickListener { updateData() }
-        deleteButton.setOnClickListener { deleteData() }
-        viewButton.setOnClickListener { viewData() }
-        buttons.setOnClickListener {
 
+        val toolbar = findViewById<Toolbar>(R.id.toolba)
+        setSupportActionBar(toolbar)
 
-            val intent = Intent(this, SharedActivity::class.java)
-            startActivity(intent)
-        }
-        buttonfire.setOnClickListener {
+        contextTextView = findViewById(R.id.context_tex)
+        popupButton = findViewById(R.id.popup_butto)
+        notifyButton = findViewById(R.id.notify_button)
 
+        // Register context menu for TextView
+        registerForContextMenu(contextTextView)
 
-            val intent = Intent(this, FireActivity::class.java)
-            startActivity(intent)
-        }
-
-    }
-
-    private fun addData() {
-        val name = nameInput.text.toString()
-        val age = ageInput.text.toString().toIntOrNull()
-        if (name.isNotEmpty() && age != null) {
-            val values = ContentValues().apply {
-                put("name", name)
-                put("age", age)
+        // Show popup menu on button click
+        popupButton.setOnClickListener {
+            val popup = PopupMenu(this, it)
+            popup.menuInflater.inflate(R.menu.popup_menu, popup.menu)
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.option_one -> showToast("Popup: Option 1 selected")
+                    R.id.option_two -> showToast("Popup: Option 2 selected")
+                }
+                true
             }
-            database.insert("users", null, values)
-            Toast.makeText(this, "Data Inserted", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Please enter valid details", Toast.LENGTH_SHORT).show()
+            popup.show()
         }
-    }
 
-    private fun updateData() {
-        val name = nameInput.text.toString()
-        val age = ageInput.text.toString().toIntOrNull()
-        if (name.isNotEmpty() && age != null) {
-            val values = ContentValues().apply {
-                put("age", age)
+        // Create notification channel
+        createNotificationChannel()
+
+        // Request notification permission (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
+        }
+
+        // Show notification on button click
+        notifyButton.setOnClickListener {
+            val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("EventHub+ Alert")
+                .setContentText("You clicked the notification button!")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+            with(NotificationManagerCompat.from(this)) {
+                notify(NOTIFICATION_ID, builder.build())
             }
-            val rowsUpdated = database.update("users", values, "name=?", arrayOf(name))
-            if (rowsUpdated > 0) {
-                Toast.makeText(this, "Data Updated", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "No record found", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Inflate Options Menu
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    // Handle Options Menu
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                showToast("Options Menu: Settings selected")
+                true
             }
-        } else {
-            Toast.makeText(this, "Please enter valid details", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun deleteData() {
-        val name = nameInput.text.toString()
-        if (name.isNotEmpty()) {
-            val rowsDeleted = database.delete("users", "name=?", arrayOf(name))
-            if (rowsDeleted > 0) {
-                Toast.makeText(this, "Data Deleted", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "No record found", Toast.LENGTH_SHORT).show()
+            R.id.action_about -> {
+                showToast("Options Menu: About selected")
+                true
             }
-        } else {
-            Toast.makeText(this, "Please enter a name", Toast.LENGTH_SHORT).show()
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
-    private fun viewData() {
-        val cursor: Cursor = database.rawQuery("SELECT * FROM users", null)
-        val data = StringBuilder()
-        if (cursor.moveToFirst()) {
-            do {
-                val id = cursor.getInt(0)
-                val name = cursor.getString(1)
-                val age = cursor.getInt(2)
-                data.append("ID: $id, Name: $name, Age: $age\n")
-            } while (cursor.moveToNext())
-        } else {
-            data.append("No records found.")
+    // Create Context Menu
+    override fun onCreateContextMenu(menu: ContextMenu?, v: View?, menuInfo: ContextMenu.ContextMenuInfo?) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        if (v?.id == R.id.context_tex) {
+            menuInflater.inflate(R.menu.context_menu, menu)
         }
-        cursor.close()
-        resultText.text = data.toString()
     }
 
+    // Handle Context Menu
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.context_edit -> {
+                showToast("Context Menu: Edit selected")
+                true
+            }
+            R.id.context_delete -> {
+                showToast("Context Menu: Delete selected")
+                true
+            }
+            else -> super.onContextItemSelected(item)
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Demo Channel"
+            val descriptionText = "Channel for button click notification"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
 }
